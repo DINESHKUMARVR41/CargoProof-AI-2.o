@@ -1,14 +1,26 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
+_backend_dir = Path(__file__).resolve().parent.parent
+_root_dir = _backend_dir.parent
+
+_env_candidates = [
+    Path('.env'),
+    _backend_dir / '.env',
+    _root_dir / '.env',
+]
+_env_files = [str(p) for p in _env_candidates if p.exists()] or ['.env']
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', extra='ignore', case_sensitive=False)
+    model_config = SettingsConfigDict(env_file=_env_files, extra='ignore', case_sensitive=False)
     app_name: str = 'CargoProof AI'
-    frontend_origins: str = 'http://localhost:5173'
+    frontend_origins: str = 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173'
     demo_mode: bool = True
     storage_mode: str = 'auto'  # auto: Supabase when configured, otherwise persistent SQLite
-    sqlite_path: str = 'data/cargoproof.db'
+    sqlite_path: str = str(_root_dir / 'data' / 'cargoproof.db')
     firebase_project_id: str = ''
+    google_application_credentials: str = ''
     supabase_url: str = ''
     supabase_anon_key: str = ''
     supabase_jwt_secret: str = ''
@@ -38,7 +50,7 @@ class Settings(BaseSettings):
     max_payment_usd: float = 25
     max_daily_agent_spend_usd: float = 100
     max_agent_budget_usd: float = 25
-    max_agent_requests: int = 10
+    max_agent_requests: int = 25
     x402_enabled: bool = False
     x402_facilitator_url: str = 'https://facilitator.goplausible.xyz'
     test_provider_enabled: bool = False

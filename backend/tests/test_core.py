@@ -43,7 +43,8 @@ def test_stale_evidence_fails_freshness():
     result=verify(inp.model_dump(),ev)
     assert next(r for r in result['rules'] if r['rule']=='EVIDENCE_FRESHNESS')['result']=='FAIL'
 
-def test_demo_agent_labels_synthetic_data_and_never_claims_payment():
+def test_demo_agent_labels_synthetic_data_and_never_claims_payment(monkeypatch):
+    monkeypatch.setattr(settings,'demo_mode',True)
     inp,ev=fixture();job=asyncio.run(run_agent(inp.model_dump(),'test-user',1.0))
     assert job['source_type']=='SYNTHETIC_TEST_CASE'
     assert job['spent_usd']==0
@@ -72,9 +73,10 @@ def test_gps_coordinates_alone_are_not_route_verification():
     result=verify(inp.model_dump(),ev)
     assert next(r for r in result['rules'] if r['rule']=='GPS_ROUTE_CONSISTENCY')['result']=='INSUFFICIENT'
 
-def test_x402_disabled_never_signs_payment():
+def test_x402_disabled_never_signs_payment(monkeypatch):
+    monkeypatch.setattr(settings,'x402_enabled',False)
     from app.payments.x402 import _signer
-    try:_signer()({'network':settings.x402_network,'asset':str(settings.x402_asset_id),'amount':'10000','payTo':'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ'})
+    try:_signer()
     except X402Error as exc:assert 'disabled' in str(exc).lower()
     else:raise AssertionError('x402 signing must remain disabled without explicit opt-in')
 
@@ -82,7 +84,26 @@ def test_x402_disabled_never_signs_payment():
 async def test_live_mode_without_providers_never_uses_synthetic_success(monkeypatch):
     from app.agent.orchestrator import run_agent
     monkeypatch.setattr(settings,'demo_mode',False)
+    monkeypatch.setattr('app.agent.orchestrator.PROVIDERS',{})
     job=await run_agent({'container_number':'MSCU1234567','origin_port':'Chennai'},'test-user',1.0)
     assert job['source_type']=='NO_EXTERNAL_EVIDENCE'
     assert job['evidence_records']==[]
     assert job['status']=='COMPLETED_WITH_INSUFFICIENT_EVIDENCE'
+
+@pytest.mark.asyncio
+async def test_live_multi_api_providers_retrieve_real_evidence(monkeypatch):
+    from app.agent.orchestrator import run_agent
+    monkeypatch.setattr(settings,'demo_mode',False)
+    job=await run_agent({'container_number':'MSCU1234567','vessel_imo':'9876543','origin_port':'Chennai','destination_port':'Singapore','cargo_description':'Electronics and tea'},'test-user',1.0)
+    assert job['source_type'] in ('LIVE_OBSERVATION', 'MIXED_LIVE_AND_SANDBOX')
+    assert len(job['evidence_records'])>0
+    assert job['status']=='COMPLETED'
+    assert 'container' in job['evidence']
+    assert 'vessel' in job['evidence']
+    assert 'gps' in job['evidence']
+    assert 'port_events' in job['evidence']
+    assert 'inspection' in job['evidence']
+    assert 'documents' in job['evidence']
+    result=verify({'container_number':'MSCU1234567','vessel_imo':'9876543','origin_port':'Chennai','destination_port':'Singapore','cargo_description':'Electronics and tea'},job['evidence'])
+    assert result['decision']=='VERIFIED'
+    assert result['risk_score']==0

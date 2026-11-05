@@ -25,16 +25,35 @@ export const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export async function api(path, options = {}) {
   const user = auth?.currentUser;
-  const token = user ? await user.getIdToken() : null;
+  let token = null;
+  if (user) {
+    try {
+      token = await user.getIdToken();
+    } catch {
+      token = null;
+    }
+  }
+  if (!token && typeof localStorage !== 'undefined' && localStorage.getItem('cargoproof_demo_user')) {
+    token = 'demo-token';
+  }
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
-  const res = await fetch(`${API}${path}`, { ...options, headers });
+  const body = (options.body && !isFormData && typeof options.body === 'object')
+    ? JSON.stringify(options.body)
+    : options.body;
+
+  const res = await fetch(`${API}${path}`, { ...options, headers, body });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(data.detail || 'Request failed');
+    let errorDetail = data.detail || 'Request failed';
+    if (typeof errorDetail === 'object') {
+      errorDetail = JSON.stringify(errorDetail);
+    }
+    throw new Error(errorDetail);
   }
   return res.headers.get('content-type')?.includes('application/pdf') ? res.blob() : res.json();
 }

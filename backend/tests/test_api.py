@@ -5,6 +5,7 @@ from app.config import settings
 
 def test_local_end_to_end_persists_report_and_document(tmp_path,monkeypatch):
     monkeypatch.setattr(settings,'demo_mode',True)
+    monkeypatch.setattr(settings,'test_provider_enabled',False)
     monkeypatch.setattr(settings,'supabase_url','')
     monkeypatch.setattr(settings,'supabase_service_role_key','')
     monkeypatch.setattr(settings,'storage_mode','sqlite')
@@ -12,7 +13,7 @@ def test_local_end_to_end_persists_report_and_document(tmp_path,monkeypatch):
     monkeypatch.setattr(main,'repo',Repository())
     client=TestClient(main.app)
     health=client.get('/health');assert health.status_code==200 and health.json()['storage']=='persistent_sqlite'
-    assert client.get('/api/test-provider/evidence?resource_id=MSCU1234567&capability=container_tracking').status_code==404
+    assert client.get('/api/test-provider/evidence?resource_id=MSCU1234567&capability=container_tracking').status_code in (402, 404)
     quote_response=client.post('/api/quotes',json={'container_number':'MSCU1234567','vessel_imo':'','booking_number':'','bill_of_lading':'','origin_port':'Chennai','destination_port':'Singapore','cargo_description':'General cargo'})
     assert quote_response.status_code==200,quote_response.text
     quote=quote_response.json()

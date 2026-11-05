@@ -2,8 +2,6 @@
 
 **Verify shipment evidence before trusting the trade.**
 
-> Repository status: document listing, authenticated uploads, verification reports, and demo/local persistence are integrated in the current build.
-
 CargoProof is a React/Vite + FastAPI application for shipment intake, quotations, evidence procurement, deterministic verification, evidence provenance, customer payment verification, x402 provider purchases and Algorand TestNet escrow operations.
 
 ## 1. Current implementation modes

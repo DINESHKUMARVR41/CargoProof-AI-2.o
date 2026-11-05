@@ -51,11 +51,19 @@ async def run_agent(shipment,user_id,budget_usd=None):
     required += ['inspection','shipping_documents']
     log(f'Analyzed shipment claims; evidence capabilities required: {", ".join(dict.fromkeys(required))}.')
     providers=[]
-    real_coverage={cap for p in PROVIDERS.values() if p.enabled and p.name!='cargoproof_test_provider' for cap in p.capabilities}
+    x402_item=None
     for provider in PROVIDERS.values():
-        overlap=[cap for cap in provider.capabilities if cap in required]
-        if provider.name=='cargoproof_test_provider':overlap=[cap for cap in overlap if cap not in real_coverage]
-        if provider.enabled and overlap:providers.append((provider,overlap))
+        if not provider.enabled:
+            continue
+        if provider.name == 'cargoproof_test_provider':
+            if settings.x402_enabled:
+                x402_item = (provider, ['container_validation'])
+        else:
+            overlap = [cap for cap in provider.capabilities if cap in required]
+            if overlap:
+                providers.append((provider, overlap))
+    if x402_item:
+        providers.insert(0, x402_item)
     requests=0;stop_procurement=False
     if settings.demo_mode:
         # The local fixture is visibly synthetic and never masquerades as a vendor.
@@ -73,7 +81,7 @@ async def run_agent(shipment,user_id,budget_usd=None):
                 requests+=1; log(f'Requesting {capability} from {provider.name}.')
                 paid_this_request=False
                 idempotency_key=hashlib.sha256(f'{user_id}|{shipment.get("container_number")}|{provider.name}|{capability}'.encode()).hexdigest()
-                provider_context={k:shipment[k] for k in ('origin_port','destination_port','vessel_imo','cargo_description') if shipment.get(k)} if provider.name=='cargoproof_test_provider' else {}
+                provider_context={k:shipment[k] for k in ('origin_port','destination_port','vessel_imo','cargo_description','container_number') if shipment.get(k)}
                 result=await provider.fetch(shipment.get('container_number') or shipment.get('vessel_imo') or shipment.get('booking_number') or 'shipment',capability=capability,_idempotency_key=idempotency_key,**provider_context)
                 job['providers'].append({'provider':provider.name,'capability':capability,'status':result.get('status'),'http_status':result.get('http_status')})
                 if result.get('status')=='PAYMENT_REQUIRED_UNSUPPORTED':
