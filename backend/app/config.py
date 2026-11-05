@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     storage_mode: str = 'auto'  # auto: Supabase when configured, otherwise persistent SQLite
     sqlite_path: str = 'data/cargoproof.db'
+    firebase_project_id: str = ''
     supabase_url: str = ''
     supabase_anon_key: str = ''
     supabase_jwt_secret: str = ''

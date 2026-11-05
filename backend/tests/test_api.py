@@ -18,6 +18,16 @@ def test_local_end_to_end_persists_report_and_document(tmp_path,monkeypatch):
     quote=quote_response.json()
     upload=client.post(f"/api/shipments/{quote['shipment_id']}/documents",files={'file':('bill.pdf',b'%PDF-1.4\nDemo file','application/pdf')})
     assert upload.status_code==200,upload.text
+    listing=client.get(f"/api/shipments/{quote['shipment_id']}/documents")
+    assert listing.status_code==200,listing.text
+    assert listing.json()['total_documents']==1
+    document=listing.json()['documents'][0]
+    assert document['id']==upload.json()['id']
+    assert document['original_filename']=='bill.pdf'
+    assert document['sha256']==upload.json()['sha256']
+    assert document['download_endpoint']==f"/api/documents/{upload.json()['id']}/download"
+    assert 'storage_path' not in document
+    assert 'extracted_text' not in document
     report_response=client.post(f"/api/verify/{quote['id']}?budget_usd=1.00")
     assert report_response.status_code==200,report_response.text
     report=report_response.json()

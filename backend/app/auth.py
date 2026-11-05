@@ -1,20 +1,29 @@
 from fastapi import Header, HTTPException
 from .config import settings
-import jwt, httpx
+import firebase_admin
+from firebase_admin import auth as firebase_auth
+from firebase_admin import credentials
 
-def current_user(authorization: str|None=Header(default=None)):
-    if not authorization or not authorization.lower().startswith('bearer '):
-        if settings.demo_mode and not settings.supabase_url:return {'id':'demo-user','email':'demo@cargoproof.local','role':'user'}
-        raise HTTPException(401,'Missing Supabase access token')
-    token=authorization.split(' ',1)[1]
-    if settings.supabase_url and settings.supabase_anon_key:
-        try:
-            r=httpx.get(settings.supabase_url.rstrip('/')+'/auth/v1/user',headers={'apikey':settings.supabase_anon_key,'Authorization':f'Bearer {token}'},timeout=8)
-            if r.status_code!=200:raise ValueError('Supabase rejected access token')
-            claims=r.json(); return {'id':claims['id'],'email':claims.get('email'),'role':claims.get('app_metadata',{}).get('role','user')}
-        except Exception as exc:raise HTTPException(401,'Invalid or expired Supabase access token') from exc
-    if not settings.supabase_jwt_secret:raise HTTPException(503,'Configure Supabase URL + anon key to validate sessions')
+
+def _firebase_app():
     try:
-        claims=jwt.decode(token,settings.supabase_jwt_secret,algorithms=['HS256'],audience=settings.supabase_jwt_audience)
-        return {'id':claims['sub'],'email':claims.get('email'),'role':claims.get('app_metadata',{}).get('role','user')}
-    except Exception as exc:raise HTTPException(401,'Invalid or expired access token') from exc
+        return firebase_admin.get_app()
+    except ValueError:
+        # Uses GOOGLE_APPLICATION_CREDENTIALS pointing to a Firebase service-account JSON file.
+        options = {"projectId": settings.firebase_project_id} if settings.firebase_project_id else None
+        return firebase_admin.initialize_app(credentials.ApplicationDefault(), options=options)
+
+
+def current_user(authorization: str | None = Header(default=None)):
+    if not authorization or not authorization.lower().startswith('bearer '):
+        if settings.demo_mode:
+            return {'id': 'demo-user', 'email': 'demo@cargoproof.local', 'role': 'user'}
+        raise HTTPException(401, 'Missing Firebase ID token')
+    token = authorization.split(' ', 1)[1]
+    if not settings.firebase_project_id:
+        raise HTTPException(503, 'Configure FIREBASE_PROJECT_ID and Firebase Admin credentials')
+    try:
+        claims = firebase_auth.verify_id_token(token, app=_firebase_app(), check_revoked=True)
+        return {'id': claims['uid'], 'email': claims.get('email'), 'role': claims.get('role', 'admin' if claims.get('admin') else 'user')}
+    except Exception as exc:
+        raise HTTPException(401, 'Invalid or expired Firebase ID token') from exc

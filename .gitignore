@@ -11,3 +11,11 @@ __pycache__/
 *.db
 backend/data/
 .DS_Store
+# Firebase private credentials
+backend/credentials/
+**/firebase-service-account.json
+
+# Environment files
+.env
+.env.*
+!.env.example

@@ -113,6 +113,25 @@ async def upload_document(shipment_id:str,file:UploadFile=File(...),user=Depends
     repo.save_document(user['id'],shipment_id,record);repo.audit(user['id'],'DOCUMENT_UPLOADED',{'document_id':did,'shipment_id':shipment_id,'sha256':digest})
     return record
 
+@app.get('/api/shipments/{shipment_id}/documents')
+def list_shipment_documents(shipment_id:str,user=Depends(current_user)):
+    shipment=repo.get_shipment(shipment_id,user['id'])
+    if not shipment:raise HTTPException(404,'Shipment not found')
+    documents=repo.list_documents(shipment_id,user['id'])
+    result=[]
+    for doc in documents:
+        result.append({
+            'id':doc.get('id'),
+            'original_filename':doc.get('original_filename'),
+            'mime_type':doc.get('mime_type'),
+            'sha256':doc.get('sha256'),
+            'size_bytes':doc.get('size_bytes'),
+            'extraction_status':doc.get('extraction_status'),
+            'uploaded_at':doc.get('created_at') or doc.get('uploaded_at'),
+            'download_endpoint':f"/api/documents/{doc.get('id')}/download"
+        })
+    return {'shipment_id':shipment_id,'total_documents':len(result),'documents':result}
+
 @app.get('/api/documents/{document_id}/download')
 async def download_document(document_id:str,user=Depends(current_user)):
     doc=repo.get_document(document_id,user['id'])

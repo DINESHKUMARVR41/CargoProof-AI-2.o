@@ -215,3 +215,12 @@ Each of the 13 checks returns `PASS`, `FAIL` or `INSUFFICIENT`. Missing evidence
 - Provider capabilities and paths are not verified until real vendor documentation/credentials are supplied.
 - The Algorand contract requires independent audit and additional operational controls before production.
 - x402 payments, Base customer receipts and escrow are distinct transactions and are never treated as interchangeable.
+
+
+## Firebase Google Authentication
+
+CargoProof uses Firebase Authentication for email/password and Google sign-in. Configure the `VITE_FIREBASE_*` variables from your Firebase Web App in `frontend/.env`. In Firebase Console, enable **Authentication → Sign-in method → Google** and **Email/Password**. Add your deployed frontend domain under **Authentication → Settings → Authorized domains**.
+
+The backend verifies Firebase ID tokens with Firebase Admin SDK. Create a Firebase service account in Project settings → Service accounts, store its JSON securely outside the repository, install backend requirements, and set `GOOGLE_APPLICATION_CREDENTIALS` to that file path plus `FIREBASE_PROJECT_ID=cargoproof-ccb53`. Never commit the service-account JSON.
+
+Email/password registration sends a verification email and signs the user out; they must verify and then sign in. Firebase Google sign-in automatically creates a Firebase account on a user's first successful Google sign-in; subsequent Google sign-ins authenticate that existing account. Supabase may remain configured for PostgreSQL storage, but it is no longer used for authentication. Existing Supabase user IDs and user-owned records are not automatically migrated to Firebase UIDs.
