@@ -16,6 +16,7 @@ const hasFirebaseConfig = Boolean(firebaseConfig.apiKey && firebaseConfig.authDo
 export const firebaseApp = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
 export const auth = firebaseApp ? getAuth(firebaseApp) : null;
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Kept only for existing database/storage integrations; it is no longer used for login.
 const url = import.meta.env.VITE_SUPABASE_URL;

@@ -7,8 +7,30 @@ import {
 import { api, auth, googleProvider } from './lib';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup,
-  signInWithRedirect, sendEmailVerification, signOut, onAuthStateChanged
+  signInWithRedirect, getRedirectResult, sendEmailVerification, signOut, onAuthStateChanged
 } from 'firebase/auth';
+
+function firebaseAuthError(err) {
+  if (!navigator.onLine) {
+    return 'You are offline. Reconnect to the internet and try Google sign-in again.';
+  }
+  if (err?.code === 'auth/network-request-failed') {
+    return 'Firebase could not reach Google authentication services. Check your internet, VPN, proxy, firewall, or ad blocker, then try again.';
+  }
+  if (err?.code === 'auth/user-not-found') {
+    return 'No account exists with this email. Create an account first.';
+  }
+  if (err?.code === 'auth/invalid-credential') {
+    return 'Incorrect email or password, or the account does not exist.';
+  }
+  if (err?.code === 'auth/unauthorized-domain') {
+    return 'Google sign-in is blocked: add this site hostname to Firebase Authentication > Settings > Authorized domains.';
+  }
+  if (err?.code === 'auth/operation-not-allowed') {
+    return 'Google sign-in is disabled. Enable the Google provider in Firebase Authentication > Sign-in method.';
+  }
+  return err?.message || 'Authentication request failed. Please try again.';
+}
 
 function Shell({ children, user, onLogout }) {
   const [open, setOpen] = useState(false);
@@ -69,6 +91,18 @@ function Login({ onDemoLogin }) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (!auth) return;
+    let cancelled = false;
+    getRedirectResult(auth).then(result => {
+      if (cancelled || !result?.user) return;
+      setMessage('Signed in successfully with Google.');
+    }).catch(err => {
+      if (!cancelled) setError(firebaseAuthError(err));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   async function submit(e) {
     e.preventDefault();
     setError('');
@@ -89,13 +123,7 @@ function Login({ onDemoLogin }) {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
-      setError(
-        err.code === 'auth/user-not-found'
-          ? 'No account exists with this email. Create an account first.'
-          : err.code === 'auth/invalid-credential'
-            ? 'Incorrect email or password, or the account does not exist.'
-            : err.message
-      );
+      setError(firebaseAuthError(err));
     } finally {
       setBusy(false);
     }
@@ -113,12 +141,12 @@ function Login({ onDemoLogin }) {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
       if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' ||
-          err.code === 'auth/cancelled-popup-request') {
+          err.code === 'auth/cancelled-popup-request' || err.code === 'auth/network-request-failed') {
         try {
           await signInWithRedirect(auth, googleProvider);
           return;
         } catch (redirectErr) {
-          setError(redirectErr.message);
+          setError(firebaseAuthError(redirectErr));
         }
       } else if (err.code === 'auth/unauthorized-domain') {
         setError('Google sign-in is blocked: add this site hostname to Firebase Authentication > Settings > Authorized domains.');
