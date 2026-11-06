@@ -162,7 +162,7 @@ async def run_procurement_agent(quote_id:str,budget_usd:float|None=None,user=Dep
     q=repo.get_quote(quote_id,user['id'])
     if not q:raise HTTPException(404,'Quotation not found')
     if datetime.fromisoformat(q['expires_at'])<datetime.now(timezone.utc):raise HTTPException(400,'Quotation has expired')
-    if settings.live_payments_enabled and not settings.demo_mode and not repo.has_confirmed_payment(user['id'],quote_id):raise HTTPException(402,'Confirmed customer payment required before evidence procurement')
+    if settings.live_payments_enabled and not settings.demo_mode and not repo.has_confirmed_payment(user['id'],quote_id):raise HTTPException(402,'Confirmed TestNet customer payment required before evidence procurement. Use Base Sepolia or Algorand TestNet.')
     requested_budget=float(budget_usd if budget_usd is not None else settings.max_agent_budget_usd)
     if repo.daily_provider_spend(user['id'])+requested_budget>settings.max_daily_agent_spend_usd:raise HTTPException(429,'Daily evidence procurement spending limit would be exceeded')
     try:job=await run_agent(q['shipment'],user['id'],requested_budget)
@@ -174,9 +174,9 @@ async def run_verification(quote_id:str,budget_usd:float|None=None,user=Depends(
     q=repo.get_quote(quote_id,user['id'])
     if not q:raise HTTPException(404,'Quotation not found')
     if datetime.fromisoformat(q['expires_at'])<datetime.now(timezone.utc):raise HTTPException(400,'Quotation has expired')
-    # When live payments are enabled in production mode, require a confirmed customer payment on Base Sepolia.
+    # Live verification accepts an on-chain Base Sepolia or Algorand TestNet customer payment.
     if settings.live_payments_enabled and not settings.demo_mode:
-        if not repo.has_confirmed_payment(user['id'],quote_id):raise HTTPException(402,'A confirmed customer payment is required before paid live procurement. Verify a Base Sepolia payment first.')
+        if not repo.has_confirmed_payment(user['id'],quote_id):raise HTTPException(402,'A confirmed TestNet customer payment is required before paid live procurement. Pay with Base Sepolia USDC or Algorand TestNet USDC.')
     requested_budget=float(budget_usd if budget_usd is not None else settings.max_agent_budget_usd)
     if repo.daily_provider_spend(user['id'])+requested_budget>settings.max_daily_agent_spend_usd:raise HTTPException(429,'Daily evidence procurement spending limit would be exceeded')
     try:job=await run_agent(q['shipment'],user['id'],requested_budget)
@@ -251,6 +251,47 @@ async def payment_verify(data:PaymentVerifyInput,user=Depends(current_user)):
 @app.post('/api/payments/authorize-testnet/{quote_id}')
 def authorize_testnet_payment(quote_id:str,user=Depends(current_user)):
     raise HTTPException(503,'Operator payment authorization is disabled. Submit and verify a real Base Sepolia USDC transaction.')
+
+@app.post('/api/payments/authorize-algorand-testnet/{quote_id}')
+def authorize_algorand_testnet_payment(quote_id:str,user=Depends(current_user)):
+    if settings.demo_mode or not settings.x402_enabled:
+        raise HTTPException(503,'Algorand TestNet payments are disabled.')
+    q=repo.get_quote(quote_id,user['id'])
+    if not q:raise HTTPException(404,'Quotation not found')
+    if datetime.fromisoformat(q['expires_at'])<datetime.now(timezone.utc):raise HTTPException(400,'Quotation has expired')
+    if q['total_usd']<=0 or q['total_usd']>settings.max_payment_usd:raise HTTPException(400,'Payment amount is outside the configured limit')
+    if not settings.x402_avm_mnemonic or not settings.test_provider_pay_to:raise HTTPException(503,'Algorand TestNet payment wallet or recipient is not configured')
+    try:
+        import algosdk
+        from algosdk import account,mnemonic
+        from algosdk.v2client import algod
+        from algosdk import transaction
+    except ImportError as exc:raise HTTPException(503,'Algorand SDK is not installed') from exc
+    try:
+        private_key=mnemonic.to_private_key(settings.x402_avm_mnemonic)
+        sender=account.address_from_private_key(private_key)
+        client=algod.AlgodClient(settings.algorand_algod_token,settings.algorand_algod_url)
+        account_info=client.account_info(sender)
+        asset_holding=next((holding for holding in account_info.get('assets',[]) if int(holding.get('asset-id',0))==settings.x402_asset_id),None)
+        amount_base_units=int(round(q['total_usd']*1_000_000))
+        if not asset_holding or int(asset_holding.get('amount',0))<amount_base_units:
+            raise HTTPException(400,'The configured Algorand TestNet wallet is not opted into USDC or has insufficient balance')
+        params=client.suggested_params()
+        txn=transaction.AssetTransferTxn(sender=sender,sp=params,receiver=settings.test_provider_pay_to,amt=amount_base_units,index=settings.x402_asset_id)
+        signed=txn.sign(private_key)
+        tx_id=client.send_transaction(signed)
+        confirmed=transaction.wait_for_confirmation(client,tx_id,4)
+    except HTTPException:raise
+    except Exception as exc:raise HTTPException(502,f'Algorand TestNet payment failed: {exc}') from exc
+    record={
+        'tx_hash':tx_id,'chain_id':settings.x402_network,'token':'Algorand TestNet USDC ASA '+str(settings.x402_asset_id),
+        'sender':sender,'recipient':settings.test_provider_pay_to,'amount_usd':q['total_usd'],
+        'status':'CONFIRMED','network':'ALGORAND_TESTNET','confirmed_round':confirmed.get('confirmed-round'),
+        'explorer_url':f'https://testnet.explorer.perawallet.app/transaction/{tx_id}'
+    }
+    repo.save_transaction(user['id'],q['id'],record)
+    repo.audit(user['id'],'CUSTOMER_PAYMENT_CONFIRMED',{'quote_id':q['id'],'tx_hash':tx_id,'network':'ALGORAND_TESTNET','amount_usd':q['total_usd']})
+    return record
 
 @app.get('/api/test-provider/evidence')
 def test_provider_evidence(request:Request,resource_id:str,capability:str,origin_port:str='',destination_port:str='',vessel_imo:str='',cargo_description:str=''):

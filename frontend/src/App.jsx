@@ -726,6 +726,26 @@ function Verify() {
                     >
                       <Wallet size={15} /> Pay with MetaMask
                     </NavLink>
+                    <button
+                      type="button"
+                      className="primary"
+                      style={{ flex: 1, minWidth: 150, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px' }}
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        setErr('');
+                        try {
+                          const payment = await api('/api/payments/authorize-algorand-testnet/' + quote.id, { method: 'POST' });
+                          setUploadMsg(`Algorand TestNet USDC payment confirmed. Tx: ${payment.tx_hash}`);
+                        } catch (e) {
+                          setErr(e.message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      <ShieldCheck size={15} /> Pay with Algorand TestNet
+                    </button>
                   </div>
                 </div>
               )}
@@ -1273,8 +1293,8 @@ function WalletPage() {
                   setBusy(true);
                   setMsg('');
                   try {
-                    const res = await api('/api/payments/authorize-testnet/' + quoteId, { method: 'POST' });
-                    setMsg('Payment authorized & confirmed on Base Sepolia: ' + res.tx_hash);
+                    const res = await api('/api/payments/authorize-algorand-testnet/' + quoteId, { method: 'POST' });
+                    setMsg('Payment confirmed on Algorand TestNet: ' + res.tx_hash);
                   } catch (e) {
                     setMsg(e.message);
                   } finally {
@@ -1282,7 +1302,7 @@ function WalletPage() {
                   }
                 }}
               >
-                <ShieldCheck size={16} /> Settle & Authorize (1-Click Testnet Signoff)
+                <ShieldCheck size={16} /> Pay quotation with Algorand TestNet USDC
               </button>
             </div>
 
