@@ -287,7 +287,8 @@ def authorize_algorand_testnet_payment(quote_id:str,user=Depends(current_user)):
         'tx_hash':tx_id,'chain_id':settings.x402_network,'token':'Algorand TestNet USDC ASA '+str(settings.x402_asset_id),
         'sender':sender,'recipient':settings.test_provider_pay_to,'amount_usd':q['total_usd'],
         'status':'CONFIRMED','network':'ALGORAND_TESTNET','confirmed_round':confirmed.get('confirmed-round'),
-        'explorer_url':f'https://testnet.explorer.perawallet.app/transaction/{tx_id}'
+        'explorer_url':f'https://testnet.explorer.perawallet.app/tx/{tx_id}',
+        'indexer_url':f'https://lora.algokit.io/testnet/transaction/{tx_id}'
     }
     repo.save_transaction(user['id'],q['id'],record)
     repo.audit(user['id'],'CUSTOMER_PAYMENT_CONFIRMED',{'quote_id':q['id'],'tx_hash':tx_id,'network':'ALGORAND_TESTNET','amount_usd':q['total_usd']})

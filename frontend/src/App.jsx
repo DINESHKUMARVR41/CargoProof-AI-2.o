@@ -1033,8 +1033,15 @@ function Report() {
             )}
             {data.customer_payment.explorer_url && (
               <div style={{ marginTop: 8 }}>
-                <a href={data.customer_payment.explorer_url} target="_blank" rel="noreferrer" className="subtle-link" style={{ color: '#2563eb', fontWeight: 600 }}>
+                <a href={data.customer_payment.explorer_url.replace('/transaction/', '/tx/')} target="_blank" rel="noreferrer" className="subtle-link" style={{ color: '#2563eb', fontWeight: 600 }}>
                   View Customer Payment on Pera Explorer <ArrowUpRight size={13} />
+                </a>
+              </div>
+            )}
+            {(data.customer_payment.indexer_url || (data.customer_payment.network === 'ALGORAND_TESTNET' && (data.customer_payment.tx_hash || data.customer_payment.transaction_hash))) && (
+              <div style={{ marginTop: 6 }}>
+                <a href={data.customer_payment.indexer_url || `https://lora.algokit.io/testnet/transaction/${data.customer_payment.tx_hash || data.customer_payment.transaction_hash}`} target="_blank" rel="noreferrer" className="subtle-link" style={{ color: '#1d4ed8', fontWeight: 600 }}>
+                  Open in AlgoKit Lora <ArrowUpRight size={13} />
                 </a>
               </div>
             )}
