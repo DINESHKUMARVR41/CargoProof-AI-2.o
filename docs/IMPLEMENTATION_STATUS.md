@@ -15,10 +15,14 @@
 
 ## Validated in this environment
 - Backend automated tests: 12 passed.
+- Focused shipment document API test: passed.
 - Python `compileall`: passed.
 - FastAPI TestClient end-to-end: health, quote, document upload, verification, report history, PDF export and SHA-256 integrity check passed.
+- Frontend Vite production build: passed after the current report/payment UI updates.
 - SQLite repository restart test: report and document metadata persisted after creating a new repository instance.
 - Frontend JSX/JS syntax transpilation using the installed TypeScript compiler: passed.
+- Synthetic shipment PDF generation, text extraction, and document attachment listing: passed.
+- Algorand TestNet transaction lookup and transaction confirmation metadata are externally observable on public TestNet infrastructure.
 
 ## Not validated here (credentials/network/tooling unavailable)
 - Vite production build: `npm install` timed out and offline install reported missing npm cache; `node_modules` is not present.

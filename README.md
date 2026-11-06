@@ -1,226 +1,401 @@
-# CargoProof AI — Complete Integrated Build
+# CargoProof AI
 
-**Verify shipment evidence before trusting the trade.**
+<div align="center">
+  <img src="frontend/public/cargoproof-logo.jpg" alt="CargoProof AI" width="220" />
 
-CargoProof is a React/Vite + FastAPI application for shipment intake, quotations, evidence procurement, deterministic verification, evidence provenance, customer payment verification, x402 provider purchases and Algorand TestNet escrow operations.
+  **Evidence-based shipment verification for transparent international trade**
 
-## 1. Current implementation modes
+  [![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB.svg)](frontend)
+  [![Backend](https://img.shields.io/badge/backend-FastAPI-009688.svg)](backend)
+  [![Payments](https://img.shields.io/badge/payments-TestNet%20only-7C3AED.svg)](#testnet-payments)
+</div>
 
-- **Demo mode (`DEMO_MODE=true`)**: runs an end-to-end local workflow using a clearly labelled `SYNTHETIC_TEST_CASE` fixture. It does not call vendors, send payments or deploy blockchain contracts.
-- **Live provider mode (`LIVE_PROVIDER_MODE=true`)**: calls only configured provider base URLs and operator-supplied documented endpoint paths. No Strale/AISFleet/Synthora API path is assumed by the code. If a provider is not configured or returns an error, CargoProof does not substitute synthetic success.
-- **Documents**: private PDF/PNG/JPEG uploads are SHA-256 fingerprinted. Text-based PDFs are extracted with pypdf for basic shipment-field matching; image OCR is not configured.
-- **Supabase mode**: when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured and `STORAGE_MODE=auto`, backend records use Supabase PostgREST and private Supabase Storage. If not configured, local development uses persistent SQLite under `backend/data/cargoproof.db`.
-- **x402**: uses GoPlausible’s official `x402-avm` HTTPX client, with TestNet exact-scheme requirement checks, budget/ASA validation, backend-only signing, automatic paid retry and settlement-receipt validation. It is disabled until explicitly configured.
-- **Customer payments**: Base Sepolia USDC transaction receipt verification is separate from x402 provider purchases.
-- **Escrow**: Algorand TestNet ASA escrow is separate from customer payments and x402 provider purchases. Contract deployment is an operator action; the application only reports confirmed on-chain state/actions.
+CargoProof AI is a full-stack shipment intelligence platform that collects shipment evidence, applies deterministic verification rules, records tamper-evident report fingerprints, and validates TestNet payments before paid verification workflows.
 
-## 2. Windows 11 quick start (PowerShell)
+> **Trust boundary:** Synthetic documents, sandbox evidence, demo mode, and TestNet transactions are not real cargo evidence, real payments, or production shipment clearance.
 
-Install Python 3.11 and Node.js 20+ first. Extract the ZIP and open PowerShell in the `CargoProof-AI` project root.
+---
+
+## Why CargoProof AI?
+
+International shipment verification often combines documents from different parties, live or delayed vessel data, manual checks, and fragmented payment records. CargoProof AI brings these pieces into a traceable workflow:
+
+- Upload private PDF, PNG, or JPEG shipment documents.
+- Validate shipment ownership and document fingerprints with SHA-256.
+- Extract document fields from text-based PDFs.
+- Apply a deterministic 13-rule verification engine.
+- Preserve evidence provenance and source references.
+- Verify Base Sepolia and Algorand TestNet payments on-chain.
+- Generate downloadable PDF reports and audit history.
+- Clearly label synthetic and mixed evidence sources.
+
+---
+
+## Core Features
+
+| Area | Capability |
+|---|---|
+| Authentication | Firebase email/password and Google sign-in; server-side Firebase ID-token verification |
+| Shipment intake | Shipment, quote, container, IMO, route, booking, bill of lading, and cargo fields |
+| Documents | PDF/PNG/JPEG upload, SHA-256 fingerprints, private storage, ownership checks, text extraction |
+| Verification | Deterministic PASS / FAIL / INSUFFICIENT rule evaluation and 13-rule reports |
+| Evidence | Configurable live-provider adapters and clearly labeled sandbox evidence |
+| Payments | Verified Base Sepolia USDC receipts and Algorand TestNet USDC ASA payments |
+| x402 | Algorand TestNet payment requirement validation and settlement receipt handling |
+| Escrow | PyTeal reference contract, on-chain state read, and operator-controlled actions |
+| Reports | HTML history, PDF export, evidence integrity checks, provenance, and audit events |
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    User([User])
+
+    subgraph Client["React 18 + Vite Frontend"]
+        UI[Shipment Dashboard]
+        Auth[Firebase Auth]
+        Upload[Document Upload]
+        Report[Verification Report]
+    end
+
+    subgraph API["FastAPI Backend"]
+        Gateway[REST API Gateway]
+        Repo[Repository Layer]
+        Agent[Evidence Procurement Agent]
+        Engine[13-Rule Verification Engine]
+        Payment[Payment Verification]
+        Audit[SHA-256 Audit & Provenance]
+    end
+
+    subgraph Data["Persistent Data"]
+        SQLite[(SQLite)]
+        Supabase[(Supabase PostgreSQL)]
+        Storage[(Private Document Storage)]
+    end
+
+    subgraph Evidence["Evidence Providers"]
+        Live[Configured Live Providers]
+        Sandbox[Synthetic x402 Sandbox]
+    end
+
+    subgraph Networks["Blockchain Test Networks"]
+        Base[Base Sepolia USDC]
+        Algo[Algorand TestNet USDC ASA]
+        Escrow[Algorand Escrow Contract]
+    end
+
+    User --> Auth
+    Auth --> UI
+    UI --> Gateway
+    Upload --> Gateway
+    Gateway --> Repo
+    Gateway --> Agent
+    Agent --> Live
+    Agent --> Sandbox
+    Agent --> Engine
+    Engine --> Audit
+    Payment --> Base
+    Payment --> Algo
+    Gateway --> Payment
+    Audit --> Report
+    Repo --> SQLite
+    Repo --> Supabase
+    Repo --> Storage
+    Gateway --> Escrow
+```
+
+### Verification Workflow
+
+```mermaid
+sequenceDiagram
+    actor Operator
+    participant UI as React Frontend
+    participant API as FastAPI
+    participant Store as Repository
+    participant Providers as Evidence Providers
+    participant Engine as Verification Engine
+    participant Chain as TestNet Networks
+
+    Operator->>UI: Sign in and create shipment
+    UI->>API: Submit shipment and documents
+    API->>Store: Enforce ownership and persist records
+    Operator->>UI: Create quote
+    UI->>API: Request verification
+    API->>Chain: Verify confirmed customer payment when required
+    Chain-->>API: Confirmed transaction details
+    API->>Providers: Purchase or retrieve evidence
+    Providers-->>API: Live, sandbox, or error evidence
+    API->>Engine: Normalize evidence and execute 13 rules
+    Engine-->>API: PASS / FAIL / INSUFFICIENT plus penalties
+    API->>Store: Persist report, audit events, and evidence fingerprint
+    API-->>UI: Return report and PDF/integrity links
+```
+
+### Decision Flow
+
+```mermaid
+flowchart TD
+    Evidence[Normalized Evidence] --> Rules[13 Deterministic Rules]
+    Rules --> Pass[PASS checks]
+    Rules --> Fail[FAIL checks]
+    Rules --> Missing[INSUFFICIENT checks]
+
+    Pass --> Score[Calculate penalty score]
+    Fail --> Score
+    Missing --> Score
+
+    Score --> Critical{Critical failure?}
+    Critical -->|Yes| Rejected[REJECTED]
+    Critical -->|No| Other{Other failure or missing evidence?}
+    Other -->|Non-critical failure| Hold[HOLD]
+    Other -->|Missing required evidence| Insufficient[INSUFFICIENT_DATA]
+    Other -->|All required checks pass| Verified[VERIFIED]
+```
+
+The 0–100 risk value is a severity-weighted rule penalty score, not a probability:
+
+- Passing and sufficient evidence does not add a risk penalty.
+- Missing evidence receives a reduced penalty.
+- Critical, high, medium, and low failures receive configured weights.
+- `VERIFIED` requires all required checks to pass.
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite 5, React Router, Firebase SDK, Lucide React |
+| Backend | Python 3.11+, FastAPI, Pydantic v2, HTTPX, Uvicorn |
+| Authentication | Firebase Authentication + Firebase Admin SDK |
+| Data | SQLite locally; Supabase PostgreSQL/PostgREST when configured |
+| Documents | PyPDF extraction, ReportLab PDFs, SHA-256 hashing |
+| Live evidence | Operator-configured provider adapters; provider paths are not invented |
+| Payments | Web3.py for Base Sepolia; py-algorand-sdk/x402-avm for Algorand |
+| Contracts | PyTeal reference escrow contract and confirmed-state CLI |
+
+---
+
+## Quick Start on Windows
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 20+
+- PowerShell
+- Git
+
+### 1. Clone and create a virtual environment
 
 ```powershell
-# Create and activate Python environment
+git clone https://github.com/DINESHKUMARVR41/CargoProof-AI-2.o.git
+cd CargoProof-AI-2.o
+
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-
-# Install backend dependencies
 python -m pip install --upgrade pip
 python -m pip install -r backend\requirements.txt
+```
 
-# Create local environment files
+### 2. Configure local environment files
+
+```powershell
 Copy-Item backend\.env.example backend\.env
 Copy-Item frontend\.env.example frontend\.env
+```
 
-# Install frontend packages
+For a local synthetic demo, start with demo mode enabled. Never add Firebase service-account files, mnemonics, RPC credentials, or Supabase service-role keys to Git.
+
+### 3. Run the frontend
+
+```powershell
 cd frontend
 npm install
-cd ..
-```
-
-Edit `backend/.env` and `frontend/.env` as described below. For a local synthetic demo, you can leave Supabase/provider/blockchain/payment credentials blank and keep `DEMO_MODE=true`.
-
-Start the backend in PowerShell window 1:
-
-```powershell
-cd backend
-..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
-```
-
-Start the frontend in PowerShell window 2:
-
-```powershell
-cd frontend
 npm run dev
 ```
 
-Open:
-- Frontend: http://localhost:5173
-- API health: http://localhost:8000/health
-- Swagger API docs: http://localhost:8000/docs
+Frontend: http://localhost:5173
 
-Alternatively, from the project root use `.\scripts\run-backend.ps1` and `.\scripts\run-frontend.ps1` in separate PowerShell windows after setup.
+### 4. Run the backend
 
-## 3. Supabase configuration
-
-1. Create a Supabase project.
-2. Open **SQL Editor** and run `database/schema.sql`.
-3. In `frontend/.env`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-4. In `backend/.env`, set `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`.
-5. Keep the service-role key only in `backend/.env`. Never copy it into the frontend.
-6. Set `DEMO_MODE=false` and `STORAGE_MODE=auto` only after auth/database setup is complete.
-7. Enable email/password in Supabase Auth and configure redirect URLs for `http://localhost:5173`.
-
-The backend validates Supabase access tokens through the Supabase Auth `/user` endpoint and applies the authenticated user ID to every record query. The service-role key is server-only; because it bypasses RLS, the backend's ownership filters are mandatory. RLS policies in the SQL schema provide an additional client-side tenant boundary.
-
-## 4. Provider configuration
-
-Provider documentation and credentials must come from your actual provider account or contract. Do not guess API paths. Set:
-
-- `LIVE_PROVIDER_MODE=true`
-- `STRALE_API_BASE`, `STRALE_ENDPOINT`, `STRALE_API_KEY`
-- `AISFLEET_API_BASE`, `AISFLEET_ENDPOINT`, `AISFLEET_API_KEY`
-- `SYNTHORA_API_BASE`, `SYNTHORA_ENDPOINT`, `SYNTHORA_API_KEY`
-
-Each endpoint is called as a GET request with `resource_id` and `capability` query parameters. Configure the exact endpoint and authentication scheme expected by your provider. The current adapters use Bearer authentication; providers requiring another auth method need a provider-specific adapter change. Provider responses must be JSON objects. The normalized evidence response shapes are described in `docs/PROVIDERS.md`.
-
-## 5. x402 provider payments (GoPlausible / Algorand TestNet)
-
-The implementation uses GoPlausible's official [x402-avm Python SDK](https://pypi.org/project/x402-avm/) and the Algorand AVM exact payment flow documented in the [GoPlausible integration guide](https://github.com/GoPlausible/.github/blob/main/profile/algorand-x402-documentation/python/x402-avm-httpx-examples-python.md). The official `x402-avm` HTTPX transport parses the provider's HTTP 402 `PAYMENT-REQUIRED` response, signs and retries using the x402 V2 payment header, and reads the `PAYMENT-RESPONSE` settlement receipt. Providers must return the x402 V2 `PAYMENT-REQUIRED` header; legacy 402 formats are not treated as payable.
-
-Configure in `backend/.env`:
-
-```dotenv
-X402_ENABLED=true
-X402_FACILITATOR_URL=https://facilitator.goplausible.xyz
-X402_NETWORK=algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=
-X402_ASSET_ID=10458941
-X402_AVM_MNEMONIC=YOUR_DEDICATED_TESTNET_AGENT_WALLET_MNEMONIC
-TEST_PROVIDER_ENABLED=true
-TEST_PROVIDER_PAY_TO=YOUR_TESTNET_USDC_RECEIVER_ADDRESS
-TEST_PROVIDER_PRICE_USD=0.01
-ALGORAND_NETWORK=testnet
-ALGORAND_ALGOD_URL=https://testnet-api.algonode.cloud
-```
-
-Fund the dedicated agent wallet with TestNet USDC ASA `10458941` and enough ALGO for fees if the provider's requirements do not include a facilitator fee payer. Use a dedicated low-balance TestNet wallet; never reuse a personal/mainnet seed. The agent rejects unsupported networks/assets, malformed requirements and payments above the remaining per-job budget. The official SDK performs the facilitator verification/settlement handshake and retries the resource request. CargoProof checks the advertised TestNet network, ASA, amount and remaining budget before allowing that SDK retry, then records provider spend only after a successful settlement response with a transaction reference.
-
-A provider must be x402-compatible and its own settlement middleware must accept the selected header version. An optional CargoProof sandbox provider is included: it uses GoPlausible's official FastAPI x402 middleware and facilitator to gate clearly synthetic evidence behind a real TestNet USDC payment. The integration uses GoPlausible's official `x402-avm` Python HTTPX client and TestNet scheme registration. For an end-to-end paid sandbox test, set `DEMO_MODE=false`, configure Supabase Auth, enable `TEST_PROVIDER_ENABLED`, set `TEST_PROVIDER_PAY_TO` to a receiver opted into TestNet USDC ASA `10458941`, and use a funded dedicated TestNet agent wallet. The local default provider URL is `http://127.0.0.1:8000`; set `TEST_PROVIDER_BASE_URL` to the backend's reachable URL if needed. Sandbox evidence is always labelled `SANDBOX_PROVIDER_DATA`; it must never be presented as live cargo evidence. The flow has not been exercised against a funded wallet in this environment.
-
-## 6. Base Sepolia customer payment verification
-
-Set `LIVE_PAYMENTS_ENABLED=true` only when all values are correct:
-
-```dotenv
-BASE_CHAIN_ID=84532
-BASE_RPC_URL=YOUR_BASE_SEPOLIA_RPC_URL
-BASE_USDC_ADDRESS=THE_VERIFIED_BASE_SEPOLIA_USDC_CONTRACT
-CARGOPROOF_TREASURY_ADDRESS=YOUR_TREASURY_ADDRESS
-MAX_PAYMENT_USD=25
-```
-
-The API checks the confirmed transaction receipt, chain ID, USDC contract, Transfer event sender, treasury recipient and exact quoted USDC amount (6 decimals). The payer submits a transaction hash and wallet address; the backend does not custody customer keys. A verified customer payment is stored separately from provider payment records. Never use a mainnet token address in TestNet configuration.
-
-## 7. Algorand escrow TestNet deployment
-
-The PyTeal reference contract is in `contracts/algorand/cargoproof_escrow_reference.py`; the deployment/interaction CLI is `contracts/algorand/scripts/escrow_cli.py`. Set `ALGORAND_VERIFIER_MNEMONIC` only in `backend/.env` and configure `ALGORAND_USDC_ASSET_ID=10458941` for the documented TestNet USDC ASA.
-
-From the project root after installing backend requirements:
+In a separate terminal:
 
 ```powershell
-# Deploy an escrow app; save the printed APP_ID
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py deploy --beneficiary BENEFICIARY_ALGORAND_ADDRESS
-
-# Fund the app account with 0.2 ALGO for its ASA opt-in minimum balance (microAlgo)
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py fund-algo --app-id APP_ID --amount 200000
-
-# Opt the app account into the USDC ASA
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py optin --app-id APP_ID
-
-# Transfer 1 USDC (1,000,000 base units) into the app address
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py fund --app-id APP_ID --amount 1000000
-
-# Record the evidence hash and the amount eligible for release
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py evidence --app-id APP_ID --sha256 YOUR_64_HEX_SHA256 --amount 1000000
-
-# Authorized verifier releases to the beneficiary
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py release --app-id APP_ID --beneficiary BENEFICIARY_ALGORAND_ADDRESS
-
-# Inspect on-chain global state
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py hold --app-id APP_ID
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py refund --app-id APP_ID --asset 10458941  # only depositor, after expiry
-.\.venv\Scripts\python.exe contracts/algorand/scripts/escrow_cli.py status --app-id APP_ID
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8003
 ```
 
-`hold` is available to the verifier; `refund` is available to the recorded depositor after expiry while the escrow is pending, verified or held. App calls that submit inner transactions use a 2,000 microAlgo fee budget. The API's `/api/escrow/{app_id}` reads confirmed state; `/api/escrow/{app_id}/actions/{hold|release|refund}` is restricted to a trusted admin and reports success only after confirmation. Configure `ALGORAND_APP_ID` and the backend verifier mnemonic before enabling API actions.
+API health: http://localhost:8003/health
+Swagger UI: http://localhost:8003/docs
 
-**TestNet only.** This is a hackathon reference contract, not an audited escrow product. Do not use real funds.
+When using port 8003, set `VITE_API_URL=http://localhost:8003` in `frontend/.env`.
 
-## 8. Tests and frontend build
+---
 
-Backend tests:
+## Configuration
+
+### Firebase Authentication
+
+Configure browser values in `frontend/.env`:
+
+```dotenv
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
+```
+
+Enable Email/Password and Google sign-in in Firebase Console. Add local and deployed frontend domains to Firebase authorized domains.
+
+Set `GOOGLE_APPLICATION_CREDENTIALS` and `FIREBASE_PROJECT_ID` in the backend environment when using server-side Firebase ID-token verification. Keep the service-account JSON outside the repository.
+
+### Persistent Storage
+
+- `DEMO_MODE=true`: local synthetic/demo workflow.
+- SQLite fallback: persistent local database under `backend/data/cargoproof.db`.
+- Supabase mode: configure database, private storage, and service-role credentials.
+
+See [`database/schema.sql`](database/schema.sql) and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+### Live Providers
+
+Configure operator-supplied provider URLs, credentials, and endpoint paths:
+
+```dotenv
+LIVE_PROVIDER_MODE=true
+STRALE_API_BASE=...
+STRALE_ENDPOINT=...
+AISFLEET_API_BASE=...
+AISFLEET_ENDPOINT=...
+SYNTHORA_API_BASE=...
+SYNTHORA_ENDPOINT=...
+```
+
+Do not invent provider paths or present sandbox evidence as live observation.
+
+---
+
+## TestNet Payments
+
+### Algorand TestNet
+
+CargoProof verifies Algorand TestNet USDC customer payments, including:
+
+- Asset ID `10458941`
+- Network confirmation
+- Sender, receiver, asset, and exact amount
+- Confirmed round
+- Public TestNet transaction reference
+
+Explorer links:
+
+- Pera: `https://testnet.explorer.perawallet.app/tx/{txid}`
+- AlgoKit Lora: `https://lora.algokit.io/testnet/transaction/{txid}`
+
+### Base Sepolia
+
+Base Sepolia customer verification validates:
+
+- Confirmed receipt status
+- Chain ID
+- Verified USDC contract
+- Transfer sender and treasury recipient
+- Exact quoted amount
+
+Do not configure mainnet assets, treasury addresses, RPC credentials, or mnemonics as TestNet values.
+
+### Payment Boundary
+
+Base Sepolia customer payments, Algorand customer payments, x402 provider purchases, and Algorand escrow are separate settlement rails. CargoProof does not treat one transaction as proof of another.
+
+---
+
+## API Overview
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/health` | Runtime modes and integration readiness |
+| `GET` | `/api/me` | Authenticated user |
+| `GET` | `/api/dashboard` | Verification and spend summary |
+| `POST` | `/api/shipments` | Create a shipment |
+| `GET` | `/api/shipments/{id}` | Retrieve an owned shipment |
+| `POST` | `/api/shipments/{id}/documents` | Upload a private document |
+| `GET` | `/api/shipments/{id}/documents` | List owned document metadata |
+| `GET` | `/api/documents/{id}/download` | Download an owned document |
+| `POST` | `/api/quotes` | Create a shipment quote |
+| `POST` | `/api/agent/run/{quote_id}` | Run evidence procurement |
+| `POST` | `/api/verify/{quote_id}` | Create a verification report |
+| `GET` | `/api/reports/{id}` | Retrieve report details |
+| `GET` | `/api/reports/{id}/integrity` | Verify report fingerprint |
+| `GET` | `/api/reports/{id}/pdf` | Download report PDF |
+| `POST` | `/api/payments/verify` | Verify Base Sepolia payment |
+| `POST` | `/api/payments/authorize-algorand-testnet/{quote_id}` | Execute and confirm an Algorand TestNet payment |
+
+Full endpoint documentation is available in the running Swagger UI at `/docs`.
+
+---
+
+## Testing and Validation
+
+Backend:
 
 ```powershell
 cd backend
 ..\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Frontend production build:
+Frontend:
 
 ```powershell
 cd frontend
 npm run build
 ```
 
-Or from project root use `scripts/test-backend.ps1` and `scripts/build-frontend.ps1`.
+Repository scripts are also available under [`scripts/`](scripts/).
 
-## 9. API endpoints
+---
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/health` | Runtime modes and integration readiness |
-| GET | `/api/me` | Authenticated user |
-| GET | `/api/dashboard` | User report statistics |
-| POST | `/api/shipments` | Register shipment |
-| GET | `/api/shipments/{id}` | Retrieve owned shipment |
-| POST | `/api/shipments/{id}/documents` | Upload private PDF/PNG/JPEG |
-| GET | `/api/documents/{id}/download` | Private download / signed URL |
-| POST | `/api/quotes` | Create shipment + itemized estimate |
-| GET | `/api/quotes/{id}` | Retrieve owned quote |
-| POST | `/api/agent/run/{quote_id}` | Run procurement agent (live mode requires customer payment) |
-| POST | `/api/verify/{quote_id}` | Procurement + 13-rule report |
-| GET | `/api/history` | Owned report history |
-| GET | `/api/reports/{id}` | Owned report details |
-| GET | `/api/reports/{id}/integrity` | Recompute SHA-256 evidence fingerprint |
-| GET | `/api/reports/{id}/pdf` | Download PDF |
-| POST | `/api/payments/verify` | Verify Base Sepolia customer USDC transfer |
-| GET | `/api/providers` | Provider registry status |
-| GET | `/api/test-provider/evidence` | Optional x402-gated synthetic sandbox evidence (TestNet only) |
-| GET | `/api/escrow/status` | Algorand configuration |
-| GET | `/api/escrow/records` | Owned registered escrow records |
-| POST | `/api/escrow/register` | Admin verifies/registers a deployed app |
-| GET | `/api/escrow/{app_id}` | Read on-chain escrow state |
-| POST | `/api/escrow/{app_id}/actions/{action}` | Admin-only hold/release/refund |
-| GET | `/api/admin/summary` | Admin-only operational summary |
+## Synthetic Test Document
 
-## 10. Verification decisions
+A visibly marked synthetic bill of lading is available at:
 
-Each of the 13 checks returns `PASS`, `FAIL` or `INSUFFICIENT`. Missing evidence never becomes a pass. Critical failures produce `REJECTED`; non-critical failures produce `HOLD`; unresolved required evidence produces `INSUFFICIENT_DATA`; all checks must pass for `VERIFIED`. The 0–100 risk index is a severity-weighted rule score, not a statistically calibrated probability.
+[`docs/samples/SYNTHETIC-BILL-OF-LADING-MSCU5278140.pdf`](docs/samples/SYNTHETIC-BILL-OF-LADING-MSCU5278140.pdf)
 
-## 11. Security and production caveats
+It is for software testing only and must not be used as real shipping evidence.
 
-- All signing mnemonics, Supabase service-role keys and RPC credentials are backend-only.
-- Demo login is only for local demo mode; configure Supabase Auth for real users.
-- Local SQLite is persistent for development but not a horizontally-scalable production database.
-- The included process-local rate limiter is a basic development guard; use a shared gateway/Redis limiter in production.
-- Provider capabilities and paths are not verified until real vendor documentation/credentials are supplied.
-- The Algorand contract requires independent audit and additional operational controls before production.
-- x402 payments, Base customer receipts and escrow are distinct transactions and are never treated as interchangeable.
+---
 
+## Documentation
 
-## Firebase Google Authentication
+- [Architecture](docs/ARCHITECTURE.md)
+- [API reference](docs/API.md)
+- [Deployment guide](docs/DEPLOYMENT.md)
+- [Provider integration](docs/PROVIDERS.md)
+- [Security notes](docs/SECURITY.md)
+- [Implementation status](docs/IMPLEMENTATION_STATUS.md)
+- [Technical project report](docs/PROJECT_REPORT.md)
 
-CargoProof uses Firebase Authentication for email/password and Google sign-in. Configure the `VITE_FIREBASE_*` variables from your Firebase Web App in `frontend/.env`. In Firebase Console, enable **Authentication → Sign-in method → Google** and **Email/Password**. Add your deployed frontend domain under **Authentication → Settings → Authorized domains**.
+---
 
-The backend verifies Firebase ID tokens with Firebase Admin SDK. Create a Firebase service account in Project settings → Service accounts, store its JSON securely outside the repository, install backend requirements, and set `GOOGLE_APPLICATION_CREDENTIALS` to that file path plus `FIREBASE_PROJECT_ID=cargoproof-ccb53`. Never commit the service-account JSON.
+## Security Notes
 
-Email/password registration sends a verification email and signs the user out; they must verify and then sign in. Firebase Google sign-in automatically creates a Firebase account on a user's first successful Google sign-in; subsequent Google sign-ins authenticate that existing account. Supabase may remain configured for PostgreSQL storage, but it is no longer used for authentication. Existing Supabase user IDs and user-owned records are not automatically migrated to Firebase UIDs.
+- Never commit backend `.env`, private keys, Firebase service-account JSON, Supabase service-role keys, RPC secrets, or mnemonics.
+- Keep signing mnemonics and payment credentials server-side.
+- Use dedicated low-balance TestNet wallets only.
+- User-owned records are scoped by authenticated identity in the repository.
+- Private document storage must remain outside public static assets.
+- Escrow contracts require independent audit and operational controls before production use.
+
+---
+
+## Production Caveat
+
+CargoProof AI is suitable for demonstrations and controlled TestNet workflows. Live provider credentials, deployment infrastructure, independent contract audits, operator controls, database hardening, production authentication, and shared rate limiting are required before production shipment or financial decisions.
+
+---
+
+## License
+
+See the repository license or project owner terms before commercial reuse, redistribution, or production deployment.
