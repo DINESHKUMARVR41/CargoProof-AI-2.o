@@ -250,14 +250,7 @@ async def payment_verify(data:PaymentVerifyInput,user=Depends(current_user)):
 
 @app.post('/api/payments/authorize-testnet/{quote_id}')
 def authorize_testnet_payment(quote_id:str,user=Depends(current_user)):
-    q=repo.get_quote(quote_id,user['id'])
-    if not q:raise HTTPException(404,'Quotation not found')
-    if datetime.fromisoformat(q['expires_at'])<datetime.now(timezone.utc):raise HTTPException(400,'Quotation has expired')
-    tx_hash='0x'+hashlib.sha256(f"{user['id']}:{quote_id}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()
-    record={'tx_hash':tx_hash,'chain_id':settings.base_chain_id,'token':settings.base_usdc_address,'sender':user.get('email','operator@cargoproof.io'),'recipient':settings.cargoproof_treasury_address,'amount_usd':q['total_usd'],'status':'CONFIRMED','authorization_type':'BASE_SEPOLIA_CONFIRMED'}
-    repo.save_transaction(user['id'],q['id'],record)
-    repo.audit(user['id'],'CUSTOMER_PAYMENT_CONFIRMED',{'quote_id':q['id'],'tx_hash':tx_hash,'type':'OPERATOR_CONFIRMED'})
-    return record
+    raise HTTPException(503,'Operator payment authorization is disabled. Submit and verify a real Base Sepolia USDC transaction.')
 
 @app.get('/api/test-provider/evidence')
 def test_provider_evidence(request:Request,resource_id:str,capability:str,origin_port:str='',destination_port:str='',vessel_imo:str='',cargo_description:str=''):

@@ -726,26 +726,6 @@ function Verify() {
                     >
                       <Wallet size={15} /> Pay with MetaMask
                     </NavLink>
-                    <button
-                      type="button"
-                      className="primary"
-                      style={{ flex: 1, minWidth: 150, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px' }}
-                      disabled={busy}
-                      onClick={async () => {
-                        setBusy(true);
-                        setErr('');
-                        try {
-                          await api('/api/payments/authorize-testnet/' + quote.id, { method: 'POST' });
-                          setUploadMsg('Payment confirmed on Base Sepolia. Verification is fully unlocked.');
-                        } catch (e) {
-                          setErr(e.message);
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      <ShieldCheck size={15} /> Settle & Authorize (1-Click)
-                    </button>
                   </div>
                 </div>
               )}
