@@ -270,16 +270,31 @@ def authorize_algorand_testnet_payment(quote_id:str,user=Depends(current_user)):
     try:
         private_key=mnemonic.to_private_key(settings.x402_avm_mnemonic)
         sender=account.address_from_private_key(private_key)
-        client=algod.AlgodClient(settings.algorand_algod_token,settings.algorand_algod_url)
-        account_info=client.account_info(sender)
+        algod_urls=[]
+        for url in (settings.algorand_algod_url,'https://testnet-api.algonode.cloud','https://testnet-api.4160.nodely.dev'):
+            if url and url not in algod_urls:
+                algod_urls.append(url)
+        node_errors=[]
+        client=None
+        account_info=None
+        for algod_url in algod_urls:
+            try:
+                candidate=algod.AlgodClient(settings.algorand_algod_token,algod_url)
+                account_info=candidate.account_info(sender,timeout=12)
+                client=candidate
+                break
+            except Exception as exc:
+                node_errors.append(f'{algod_url}: {exc}')
+        if client is None:
+            raise HTTPException(503,'Algorand TestNet node is unreachable. Check internet/VPN/firewall and try again. No transaction was submitted.')
         asset_holding=next((holding for holding in account_info.get('assets',[]) if int(holding.get('asset-id',0))==settings.x402_asset_id),None)
         amount_base_units=int(round(q['total_usd']*1_000_000))
         if not asset_holding or int(asset_holding.get('amount',0))<amount_base_units:
             raise HTTPException(400,'The configured Algorand TestNet wallet is not opted into USDC or has insufficient balance')
-        params=client.suggested_params()
+        params=client.suggested_params(timeout=12)
         txn=transaction.AssetTransferTxn(sender=sender,sp=params,receiver=settings.test_provider_pay_to,amt=amount_base_units,index=settings.x402_asset_id)
         signed=txn.sign(private_key)
-        tx_id=client.send_transaction(signed)
+        tx_id=client.send_transaction(signed,timeout=12)
         confirmed=transaction.wait_for_confirmation(client,tx_id,4)
     except HTTPException:raise
     except Exception as exc:raise HTTPException(502,f'Algorand TestNet payment failed: {exc}') from exc
