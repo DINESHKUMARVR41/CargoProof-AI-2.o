@@ -15,7 +15,7 @@ function Shell({ children, user, onLogout }) {
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
-    api('/health').then(setHealth).catch(() => {});
+    api('/health').then(setHealth).catch(() => { });
   }, []);
 
   const nav = [
@@ -26,7 +26,6 @@ function Shell({ children, user, onLogout }) {
     ['/providers', 'Providers', Globe],
     ['/escrow', 'Algorand escrow', Shield],
     ['/settings', 'Profile & settings', Settings],
-    ['/admin', 'Admin', Settings]
   ];
 
   const userInitial = (user?.email || user?.displayName || 'D').slice(0, 1).toUpperCase();
@@ -35,8 +34,7 @@ function Shell({ children, user, onLogout }) {
     <div className="app">
       <aside className={open ? 'sidebar open' : 'sidebar'}>
         <div className="brand">
-          <span className="brand-icon"><Anchor /></span>
-          <div><b>CARGOPROOF</b><small>TRADE INTELLIGENCE</small></div>
+          <img src="/cargoproof-logo.png" alt="CargoProof" className="brand-logo-img" />
         </div>
         <div className="workspace-label">WORKSPACE</div>
         {nav.map(([to, label, Icon]) => (
@@ -57,18 +55,6 @@ function Shell({ children, user, onLogout }) {
       </aside>
 
       <main className="main">
-        <header className="topbar">
-          <button className="icon-btn mobile-menu" onClick={() => setOpen(!open)}>
-            {open ? <X /> : <Menu />}
-          </button>
-          <div className="crumb">Workspace <span>/</span> <b>CargoProof AI</b></div>
-          <div className="top-actions">
-            <span className="mode-pill">
-              <i /> {health ? (health.demo_mode ? 'DEMO ENVIRONMENT' : 'LIVE CONFIGURATION') : 'CONNECTING'}
-            </span>
-            <div className="avatar small">{userInitial}</div>
-          </div>
-        </header>
         <div className="content">{children}</div>
       </main>
     </div>
@@ -107,8 +93,8 @@ function Login({ onDemoLogin }) {
         err.code === 'auth/user-not-found'
           ? 'No account exists with this email. Create an account first.'
           : err.code === 'auth/invalid-credential'
-          ? 'Incorrect email or password, or the account does not exist.'
-          : err.message
+            ? 'Incorrect email or password, or the account does not exist.'
+            : err.message
       );
     } finally {
       setBusy(false);
@@ -136,8 +122,9 @@ function Login({ onDemoLogin }) {
     <div className="login-page">
       <div className="login-card">
         <div className="brand centered">
-          <span className="brand-icon"><Anchor /></span>
-          <div><b>CARGOPROOF</b><small>TRADE INTELLIGENCE</small></div>
+          <div className="login-logo-badge">
+            <img src="/cargoproof-logo.png" alt="CargoProof" className="login-logo-img" />
+          </div>
         </div>
         <h1>{signup ? 'Create your account' : 'Welcome back'}</h1>
         <p>Verify shipment evidence with confidence.</p>
@@ -149,7 +136,7 @@ function Login({ onDemoLogin }) {
         <button
           type="button"
           className="secondary full"
-          style={{ marginTop: 10, borderColor: '#3b82f6', color: '#93c5fd', background: '#0e243d' }}
+          style={{ marginTop: 10, borderColor: '#93c5fd', color: '#1d4ed8', background: '#eff6ff', fontWeight: 600 }}
           onClick={onDemoLogin}
           disabled={busy}
         >
@@ -193,7 +180,7 @@ function App() {
         setUser(JSON.parse(demo));
         setLoading(false);
         return;
-      } catch {}
+      } catch { }
     }
 
     if (!auth) {
@@ -207,7 +194,7 @@ function App() {
       } else {
         const demoSaved = typeof localStorage !== 'undefined' ? localStorage.getItem('cargoproof_demo_user') : null;
         if (demoSaved) {
-          try { setUser(JSON.parse(demoSaved)); } catch {}
+          try { setUser(JSON.parse(demoSaved)); } catch { }
         } else {
           setUser(null);
         }
@@ -218,7 +205,7 @@ function App() {
 
   async function logout() {
     if (typeof localStorage !== 'undefined') localStorage.removeItem('cargoproof_demo_user');
-    if (auth) try { await signOut(auth); } catch {}
+    if (auth) try { await signOut(auth); } catch { }
     setUser(null);
   }
 
@@ -262,10 +249,23 @@ function Header({ eyebrow, title, desc, action }) {
   );
 }
 
-function Stat({ label, value, sub, Icon }) {
+function Stat({ label, value, sub, Icon, accent = '#2563eb' }) {
   return (
-    <div className="stat-card">
-      <div className="stat-top"><span>{label}</span><Icon size={18} /></div>
+    <div className="stat-card" style={{ borderTop: `3px solid ${accent}` }}>
+      <div className="stat-top">
+        <span>{label}</span>
+        <div style={{
+          width: 28,
+          height: 28,
+          borderRadius: 7,
+          background: `${accent}18`,
+          color: accent,
+          display: 'grid',
+          placeItems: 'center'
+        }}>
+          <Icon size={16} />
+        </div>
+      </div>
       <strong>{value}</strong>
       <small>{sub}</small>
     </div>
@@ -283,18 +283,16 @@ function Dashboard() {
   return (
     <>
       <Header
-        eyebrow="OVERVIEW / OPERATIONS"
         title="Shipment intelligence"
-        desc="Monitor verification activity, evidence quality and provider connectivity."
         action={<NavLink to="/verify" className="primary"><Plus size={17} /> New verification</NavLink>}
       />
       {err && <div className="notice">{err}</div>}
       <div className="stats">
-        <Stat label="Total verifications" value={data?.total_verifications ?? '—'} sub="Completed reports" Icon={FileCheck2} />
-        <Stat label="Verified shipments" value={data?.verified ?? '—'} sub="No disqualifying conflicts" Icon={ShieldCheck} />
-        <Stat label="On hold" value={data?.on_hold ?? '—'} sub="Requires further review" Icon={Activity} />
-        <Stat label="Rejected" value={data?.rejected ?? '—'} sub="Critical evidence conflicts" Icon={Container} />
-        <Stat label="Insufficient data" value={data?.insufficient_data ?? '—'} sub="Evidence unavailable" Icon={FileCheck2} />
+        <Stat label="Total verifications" value={data?.total_verifications ?? '—'} sub="Completed reports" Icon={FileCheck2} accent="#2563eb" />
+        <Stat label="Verified shipments" value={data?.verified ?? '—'} sub="No disqualifying conflicts" Icon={ShieldCheck} accent="#059669" />
+        <Stat label="On hold" value={data?.on_hold ?? '—'} sub="Requires further review" Icon={Activity} accent="#d97706" />
+        <Stat label="Rejected" value={data?.rejected ?? '—'} sub="Critical evidence conflicts" Icon={Container} accent="#dc2626" />
+        <Stat label="Insufficient data" value={data?.insufficient_data ?? '—'} sub="Evidence unavailable" Icon={FileCheck2} accent="#6366f1" />
       </div>
 
       <div className="two-col">
@@ -340,20 +338,7 @@ function Dashboard() {
               <span className="provider-status">{p.mode}</span>
             </div>
           ))}
-          <div className="notice compact">
-            {data?.demo_mode
-              ? 'Demo mode uses synthetic evidence only; no provider was contacted.'
-              : 'Live provider adapters require documented endpoints, credentials and valid x402 payment settings.'}
-          </div>
         </section>
-      </div>
-
-      <div className="banner">
-        <div className="banner-icon"><ShieldCheck /></div>
-        <div>
-          <b>Evidence-first verification</b>
-          <p>Every report records evidence classification, timestamps and a SHA-256 fingerprint. A hash protects integrity; it does not prove the source data is true.</p>
-        </div>
       </div>
     </>
   );
@@ -442,6 +427,41 @@ const REAL_PRESETS = [
   }
 ];
 
+const PRESET_THEMES = {
+  finntide: {
+    primary: '#0d9488',
+    border: '#99f6e4',
+    bg: '#ffffff',
+    bgActive: '#f0fdfa',
+    badgeBg: '#ccfbf1',
+    shadow: 'rgba(13, 148, 136, 0.2)'
+  },
+  finnmaid: {
+    primary: '#0284c7',
+    border: '#bae6fd',
+    bg: '#ffffff',
+    bgActive: '#f0f9ff',
+    badgeBg: '#e0f2fe',
+    shadow: 'rgba(2, 132, 199, 0.2)'
+  },
+  msc_oscar: {
+    primary: '#d97706',
+    border: '#fde68a',
+    bg: '#ffffff',
+    bgActive: '#fffbeb',
+    badgeBg: '#fef3c7',
+    shadow: 'rgba(217, 119, 6, 0.2)'
+  },
+  ever_given: {
+    primary: '#059669',
+    border: '#a7f3d0',
+    bg: '#ffffff',
+    bgActive: '#f0fdf4',
+    badgeBg: '#d1fae5',
+    shadow: 'rgba(5, 150, 105, 0.2)'
+  }
+};
+
 function Verify() {
   const [form, setForm] = useState(REAL_PRESETS[0].data);
   const [activePreset, setActivePreset] = useState(REAL_PRESETS[0].id);
@@ -454,7 +474,7 @@ function Verify() {
   const nav = useNavigate();
 
   useEffect(() => {
-    api('/health').then(setHealth).catch(() => {});
+    api('/health').then(setHealth).catch(() => { });
   }, []);
 
   function selectPreset(preset) {
@@ -504,43 +524,61 @@ function Verify() {
 
   return (
     <>
-      <Header
-        eyebrow="SHIPMENT / NEW REQUEST"
-        title="Verify a shipment"
-        desc="Select a real operating maritime preset or input any genuine container and IMO to query live APIs."
-      />
-
       <div className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-head">
           <div>
             <h3>Real-World Maritime Presets</h3>
-            <p>1-Click instant test presets backed by live global AIS feeds, BIC containers and Strale data</p>
           </div>
-          <span className="tiny-label">GENUINE DATA</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 10 }}>
-          {REAL_PRESETS.map(p => (
-            <button
-              key={p.id}
-              type="button"
-              className="stat-card"
-              onClick={() => selectPreset(p)}
-              style={{
-                cursor: 'pointer',
-                textAlign: 'left',
-                border: activePreset === p.id ? '2px solid #3b82f6' : '1px solid #1e293b',
-                background: activePreset === p.id ? '#0f1f38' : '#0b1329',
-                padding: '12px 14px'
-              }}
-            >
-              <div className="stat-top" style={{ marginBottom: 4 }}>
-                <span style={{ fontSize: 11, color: activePreset === p.id ? '#60a5fa' : '#94a3b8', fontWeight: 600 }}>{p.badge}</span>
-                <Ship size={16} />
-              </div>
-              <strong style={{ fontSize: 15, display: 'block' }}>{p.name}</strong>
-              <small style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>{p.details}</small>
-            </button>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 12 }}>
+          {REAL_PRESETS.map(p => {
+            const isSel = activePreset === p.id;
+            const theme = PRESET_THEMES[p.id] || PRESET_THEMES.finntide;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                className="stat-card"
+                onClick={() => selectPreset(p)}
+                style={{
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  border: isSel ? `2px solid ${theme.primary}` : `1px solid ${theme.border}`,
+                  background: isSel ? theme.bgActive : theme.bg,
+                  padding: '14px 16px',
+                  boxShadow: isSel ? `0 4px 12px ${theme.shadow}` : '0 1px 3px rgba(0,0,0,0.03)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div className="stat-top" style={{ marginBottom: 6 }}>
+                  <span style={{
+                    fontSize: 10,
+                    color: theme.primary,
+                    fontWeight: 700,
+                    letterSpacing: '0.6px',
+                    background: theme.badgeBg,
+                    padding: '3px 8px',
+                    borderRadius: 4
+                  }}>
+                    {p.badge}
+                  </span>
+                  <div style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    background: theme.badgeBg,
+                    color: theme.primary,
+                    display: 'grid',
+                    placeItems: 'center'
+                  }}>
+                    <Ship size={15} />
+                  </div>
+                </div>
+                <strong style={{ fontSize: 15, display: 'block', color: '#0f172a', marginTop: 8 }}>{p.name}</strong>
+                <small style={{ fontSize: 11, color: '#475569', marginTop: 4, display: 'block', lineHeight: 1.4 }}>{p.details}</small>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -661,23 +699,23 @@ function Verify() {
               {err && <div className="error">{err}</div>}
 
               {health?.live_payments && (
-                <div style={{ marginTop: 12, marginBottom: 10, padding: 12, background: '#0e1e38', borderRadius: 8, border: '1px solid #1e3a8a' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: '#93c5fd', fontWeight: 600 }}>CUSTOMER PAYMENT GATEWAY</span>
-                    <span style={{ fontSize: 11, color: '#38bdf8' }}>BASE SEPOLIA</span>
+                <div style={{ marginTop: 14, marginBottom: 12, padding: 14, background: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontSize: 11, color: '#1e40af', fontWeight: 700, letterSpacing: '0.8px' }}>CUSTOMER PAYMENT GATEWAY</span>
+                    <span style={{ fontSize: 11, color: '#2563eb', fontWeight: 600 }}>BASE SEPOLIA</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <NavLink
                       to={`/wallet?quote_id=${quote.id}`}
                       className="secondary"
-                      style={{ flex: 1, minWidth: 150, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderColor: '#3b82f6', color: '#93c5fd', padding: '8px 12px' }}
+                      style={{ flex: 1, minWidth: 150, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderColor: '#bfdbfe', color: '#1e40af', background: '#ffffff', padding: '9px 14px' }}
                     >
                       <Wallet size={15} /> Pay with MetaMask
                     </NavLink>
                     <button
                       type="button"
                       className="primary"
-                      style={{ flex: 1, minWidth: 150, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#0284c7', padding: '8px 12px' }}
+                      style={{ flex: 1, minWidth: 150, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px' }}
                       disabled={busy}
                       onClick={async () => {
                         setBusy(true);
@@ -713,12 +751,11 @@ function HistoryPage() {
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
-    api('/api/history').then(setRows).catch(() => {});
+    api('/api/history').then(setRows).catch(() => { });
   }, []);
 
   return (
     <>
-      <Header eyebrow="RECORDS / HISTORY" title="Verification reports" desc="Your shipment verification history and evidence records." />
       <section className="panel">
         <div className="panel-head"><div><h3>All reports</h3><p>{rows.length} records</p></div></div>
         {rows.length ? (
@@ -838,7 +875,7 @@ function Report() {
                       target="_blank"
                       rel="noreferrer"
                       className="subtle-link"
-                      style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#60a5fa' }}
+                      style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563eb' }}
                     >
                       Official Carrier Tracking Portal <ArrowUpRight size={13} />
                     </a>
@@ -863,7 +900,7 @@ function Report() {
                     </div>
                     {data.evidence.gps[0].location_name && (
                       <div style={{ marginTop: 2 }}>
-                        <small style={{ color: '#38bdf8' }}>
+                        <small style={{ color: '#0284c7' }}>
                           Channel: {data.evidence.gps[0].location_name}
                         </small>
                       </div>
@@ -873,13 +910,13 @@ function Report() {
                         title="Vessel Live Map"
                         width="100%"
                         height="200"
-                        style={{ border: '1px solid #1e3a8a', borderRadius: 6, background: '#0a1020' }}
+                        style={{ border: '1px solid #cbd5e1', borderRadius: 8, background: '#f8fafc' }}
                         loading="lazy"
                         src={`https://www.openstreetmap.org/export/embed.html?bbox=${(Number(data.evidence.gps[0].lon) - 0.45).toFixed(4)}%2C${(Number(data.evidence.gps[0].lat) - 0.25).toFixed(4)}%2C${(Number(data.evidence.gps[0].lon) + 0.45).toFixed(4)}%2C${(Number(data.evidence.gps[0].lat) + 0.25).toFixed(4)}&layer=mapnik&marker=${Number(data.evidence.gps[0].lat).toFixed(4)}%2C${Number(data.evidence.gps[0].lon).toFixed(4)}`}
                       ></iframe>
                     </div>
                     <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                      <span style={{ fontSize: 11, color: '#64748b' }}>
                         Route: {data.evidence.vessel.origin || 'Origin'} → {data.evidence.vessel.destination || 'Destination'}
                       </span>
                       <a
@@ -887,7 +924,7 @@ function Report() {
                         target="_blank"
                         rel="noreferrer"
                         className="subtle-link"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#60a5fa', fontSize: 12 }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563eb', fontSize: 12 }}
                       >
                         Full Screen Map <ArrowUpRight size={13} />
                       </a>
@@ -911,7 +948,7 @@ function Report() {
                 )}
                 {data.evidence.port_events[0].port_call_details && (
                   <div>
-                    <small style={{ color: '#38bdf8' }}>
+                    <small style={{ color: '#0284c7' }}>
                       Customs Call: {data.evidence.port_events[0].port_call_details.customs_reference} (ISPS Level {data.evidence.port_events[0].port_call_details.security_level})
                     </small>
                   </div>
@@ -934,7 +971,7 @@ function Report() {
                       target="_blank"
                       rel="noreferrer"
                       className="subtle-link"
-                      style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#60a5fa' }}
+                      style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563eb' }}
                     >
                       Strale Verified Audit Record <ArrowUpRight size={13} />
                     </a>
@@ -962,18 +999,18 @@ function Report() {
       </div>
 
       {data.customer_payment && (
-        <div className="panel" style={{ border: '1px solid #3b82f6', background: '#0c1e38' }}>
+        <div className="panel" style={{ border: '1px solid #bfdbfe', background: '#eff6ff' }}>
           <div className="panel-head">
             <div>
-              <h3 style={{ color: '#60a5fa' }}>Customer Payment Verification</h3>
+              <h3 style={{ color: '#1e40af' }}>Customer Payment Verification</h3>
               <p>Customer verification fee settled on Base Sepolia</p>
             </div>
-            <span className="tiny-label" style={{ background: '#1e3a8a', color: '#93c5fd' }}>BASE SEPOLIA</span>
+            <span className="tiny-label" style={{ background: '#dbeafe', color: '#1e40af', borderColor: '#bfdbfe' }}>BASE SEPOLIA</span>
           </div>
           <div style={{ padding: '8px 0' }}>
-            <div><small>Status: <strong style={{ color: '#38bdf8' }}>{data.customer_payment.status || 'CONFIRMED'}</strong> · Amount: ${data.customer_payment.amount_usd || data.paid_usd} USDC</small></div>
+            <div><small>Status: <strong style={{ color: '#2563eb' }}>{data.customer_payment.status || 'CONFIRMED'}</strong> · Amount: ${data.customer_payment.amount_usd || data.paid_usd} USDC</small></div>
             {data.customer_payment.transaction_hash && (
-              <div><small>Tx Hash: <code style={{ color: '#93c5fd' }}>{data.customer_payment.transaction_hash}</code></small></div>
+              <div><small>Tx Hash: <code style={{ color: '#1d4ed8' }}>{data.customer_payment.transaction_hash}</code></small></div>
             )}
             {data.customer_payment.payer_address && (
               <div><small>Payer: <code>{data.customer_payment.payer_address}</code></small></div>
@@ -983,22 +1020,22 @@ function Report() {
       )}
 
       {data.agent_job?.payment_records?.length > 0 && (
-        <div className="panel" style={{ border: '1px solid #10b981', background: '#062016' }}>
+        <div className="panel" style={{ border: '1px solid #a7f3d0', background: '#ecfdf5' }}>
           <div className="panel-head">
             <div>
-              <h3 style={{ color: '#34d399' }}>Real On-Chain x402 Payment Settlement</h3>
+              <h3 style={{ color: '#065f46' }}>Real On-Chain x402 Payment Settlement</h3>
               <p>Autonomous agent Algorand TestNet micropayment receipts via GoPlausible facilitator</p>
             </div>
-            <span className="tiny-label" style={{ background: '#064e3b', color: '#6ee7b7' }}>ALGORAND TESTNET</span>
+            <span className="tiny-label" style={{ background: '#d1fae5', color: '#065f46', borderColor: '#a7f3d0' }}>ALGORAND TESTNET</span>
           </div>
           {data.agent_job.payment_records.map((p, idx) => (
-            <div key={idx} className="stat-card" style={{ textAlign: 'left', marginTop: 10, background: '#092d1f', border: '1px solid #059669' }}>
+            <div key={idx} className="stat-card" style={{ textAlign: 'left', marginTop: 10, background: '#ffffff', border: '1px solid #a7f3d0' }}>
               <div className="stat-top">
-                <span style={{ color: '#34d399', fontWeight: 600 }}>Provider: {p.provider} ({p.capability})</span>
-                <span style={{ fontSize: 13, color: '#6ee7b7' }}>${p.amount_usd?.toFixed(4)} USD</span>
+                <span style={{ color: '#047857', fontWeight: 600 }}>Provider: {p.provider} ({p.capability})</span>
+                <span style={{ fontSize: 13, color: '#065f46', fontWeight: 700 }}>${p.amount_usd?.toFixed(4)} USD</span>
               </div>
-              <div style={{ marginTop: 6 }}><small>Transaction Hash: <code style={{ color: '#a7f3d0' }}>{p.tx_id}</code></small></div>
-              <div><small>Payee Address: <code style={{ color: '#a7f3d0' }}>{p.pay_to}</code></small></div>
+              <div style={{ marginTop: 6 }}><small>Transaction Hash: <code style={{ color: '#047857' }}>{p.tx_id}</code></small></div>
+              <div><small>Payee Address: <code style={{ color: '#047857' }}>{p.pay_to}</code></small></div>
               <div><small>Settlement Facilitator: {p.facilitator || 'GoPlausible x402-avm'}</small></div>
               <div style={{ marginTop: 8 }}>
                 <a
@@ -1006,7 +1043,7 @@ function Report() {
                   target="_blank"
                   rel="noreferrer"
                   className="subtle-link"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#34d399', fontWeight: 600 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#059669', fontWeight: 600 }}
                 >
                   View Confirmed Transaction on Pera Explorer <ArrowUpRight size={13} />
                 </a>
@@ -1050,7 +1087,7 @@ function WalletPage() {
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
-    api('/health').then(setHealth).catch(() => {});
+    api('/health').then(setHealth).catch(() => { });
   }, []);
 
   const usdc = (import.meta.env.VITE_BASE_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e').trim();
@@ -1145,42 +1182,35 @@ function WalletPage() {
 
   return (
     <>
-      <Header
-        eyebrow="ACCOUNT / WALLET"
-        title="Wallet & payments"
-        desc="Customer payments to CargoProof are separate from provider x402 purchases and Algorand escrow."
-      />
       <div className="two-col">
         <section className="panel">
           <div className="panel-head">
             <div>
               <h3>Base Sepolia Customer Wallet</h3>
-              <p>Connect MetaMask to settle USDC quotations on Base Sepolia, or use 1-Click testnet signoff.</p>
             </div>
-            <span className="tiny-label" style={{ background: '#0e2a4a', color: '#60a5fa', borderColor: '#1e40af' }}>
-              CHAIN ID 84532
-            </span>
           </div>
 
           <div style={{
-            background: '#09182a',
-            border: '1px solid #1c3350',
-            borderRadius: 8,
-            padding: '14px 16px',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
+            padding: '16px',
             marginBottom: 20,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 12,
-            flexWrap: 'wrap'
+            flexWrap: 'wrap',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               <div style={{
-                width: 38,
-                height: 38,
-                borderRadius: 8,
-                background: wallet ? '#063528' : '#142c47',
-                color: wallet ? '#34d399' : '#60a5fa',
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: wallet ? '#ecfdf5' : '#eff6ff',
+                color: wallet ? '#059669' : '#2563eb',
+                border: wallet ? '1px solid #a7f3d0' : '1px solid #bfdbfe',
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0
@@ -1188,10 +1218,10 @@ function WalletPage() {
                 <Wallet size={18} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <b style={{ fontSize: 13, color: '#f1f5f9', display: 'block' }}>
+                <b style={{ fontSize: 13, color: '#0f172a', display: 'block' }}>
                   {wallet ? 'MetaMask Connected' : 'MetaMask Not Connected'}
                 </b>
-                <small style={{ fontSize: 11, color: wallet ? '#34d399' : '#94a3b8', display: 'block', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <small style={{ fontSize: 11, color: wallet ? '#059669' : '#64748b', display: 'block', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {wallet ? `Account: ${wallet}` : 'Connect your browser wallet to sign Base Sepolia USDC transfers'}
                 </small>
               </div>
@@ -1218,9 +1248,6 @@ function WalletPage() {
                 onChange={e => setQuoteId(e.target.value)}
                 placeholder="e.g. 5e82660c-a6b8-4e14-a308-74b98052c197"
               />
-              <small style={{ display: 'block', color: '#64748b', fontSize: 11, marginTop: 4 }}>
-                Quotation UUID generated when submitting shipment details.
-              </small>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
@@ -1240,11 +1267,12 @@ function WalletPage() {
                 className="secondary full"
                 style={{
                   margin: 0,
-                  borderColor: '#2563eb',
-                  color: '#93c5fd',
-                  background: '#0a1d37',
+                  borderColor: '#93c5fd',
+                  color: '#1d4ed8',
+                  background: '#eff6ff',
                   justifyContent: 'center',
-                  gap: 8
+                  gap: 8,
+                  fontWeight: 600
                 }}
                 disabled={busy || !quoteId}
                 onClick={async () => {
@@ -1304,26 +1332,26 @@ function WalletPage() {
                 alignItems: 'center',
                 gap: 10,
                 background: msg.includes('failed') || msg.includes('not detected') || msg.includes('Error')
-                  ? '#261117'
+                  ? '#fef2f2'
                   : msg.includes('confirmed') || msg.includes('Connected')
-                  ? '#07261c'
-                  : '#0b1d30',
+                    ? '#ecfdf5'
+                    : '#eff6ff',
                 border: msg.includes('failed') || msg.includes('not detected') || msg.includes('Error')
-                  ? '1px solid #7f1d1d'
+                  ? '1px solid #fecaca'
                   : msg.includes('confirmed') || msg.includes('Connected')
-                  ? '1px solid #059669'
-                  : '1px solid #1e3a8a',
+                    ? '1px solid #a7f3d0'
+                    : '1px solid #bfdbfe',
                 color: msg.includes('failed') || msg.includes('not detected') || msg.includes('Error')
-                  ? '#fca5a5'
+                  ? '#b91c1c'
                   : msg.includes('confirmed') || msg.includes('Connected')
-                  ? '#6ee7b7'
-                  : '#93c5fd'
+                    ? '#047857'
+                    : '#1d4ed8'
               }}
             >
               {msg.includes('failed') || msg.includes('not detected') || msg.includes('Error') ? (
-                <AlertCircle size={16} style={{ flexShrink: 0, color: '#f87171' }} />
+                <AlertCircle size={16} style={{ flexShrink: 0, color: '#dc2626' }} />
               ) : (
-                <ShieldCheck size={16} style={{ flexShrink: 0, color: '#34d399' }} />
+                <ShieldCheck size={16} style={{ flexShrink: 0, color: '#059669' }} />
               )}
               <span>{msg}</span>
             </div>
@@ -1334,25 +1362,6 @@ function WalletPage() {
               Live customer payments are disabled in demo mode. In demo mode, verification can proceed directly without on-chain payments.
             </div>
           )}
-        </section>
-
-        <section className="panel">
-          <h3>Payment network separation</h3>
-          <div className="provider-row">
-            <div className="provider-info"><b>Customer → CargoProof</b><small>Base Sepolia USDC · chain receipt verification</small></div>
-            <span className="provider-status">{health?.live_payments ? 'ENABLED' : 'DISABLED'}</span>
-          </div>
-          <div className="provider-row">
-            <div className="provider-info"><b>CargoProof → Evidence provider</b><small>x402 · GoPlausible facilitator · Algorand TestNet</small></div>
-            <span className="provider-status">{health?.x402_enabled ? 'ENABLED' : 'DISABLED'}</span>
-          </div>
-          <div className="provider-row">
-            <div className="provider-info"><b>Escrow settlement</b><small>Algorand ASA escrow contract</small></div>
-            <span className="provider-status">{health?.algorand?.mode || 'NOT CONFIGURED'}</span>
-          </div>
-          <div className="notice">
-            No payment is displayed as completed until a matching chain receipt or facilitator settlement response is confirmed.
-          </div>
         </section>
       </div>
     </>
@@ -1369,11 +1378,6 @@ function ProvidersPage() {
 
   return (
     <>
-      <Header
-        eyebrow="DATA SOURCES / MARKETPLACE"
-        title="Evidence providers"
-        desc="Provider adapters require operator-supplied documented endpoints and credentials."
-      />
       {err && <div className="notice">{err}</div>}
       <section className="panel">
         {data.map(p => (
@@ -1387,9 +1391,6 @@ function ProvidersPage() {
           </div>
         ))}
       </section>
-      <div className="notice">
-        A provider returning HTTP 402 is not treated as successful evidence. The agent validates supported payment requirements and stops unless a signing-capable x402 client can complete settlement.
-      </div>
     </>
   );
 }
@@ -1403,7 +1404,7 @@ function EscrowPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api('/api/escrow/records').then(setRecords).catch(() => {});
+    api('/api/escrow/records').then(setRecords).catch(() => { });
   }, []);
 
   async function load() {
@@ -1443,7 +1444,7 @@ function EscrowPage() {
       const r = await api('/api/escrow/' + appId + '/actions/' + action, { method: 'POST' });
       setData(r.application);
       setMsg('Confirmed transaction ' + r.tx_id + ' at round ' + r.confirmed_round);
-      api('/api/escrow/records').then(setRecords).catch(() => {});
+      api('/api/escrow/records').then(setRecords).catch(() => { });
     } catch (e) {
       setMsg(e.message);
     } finally {
@@ -1453,14 +1454,8 @@ function EscrowPage() {
 
   return (
     <>
-      <Header
-        eyebrow="BLOCKCHAIN / TESTNET"
-        title="Algorand escrow"
-        desc="Register a deployed escrow, inspect confirmed state and submit authorized state transitions."
-      />
       <section className="panel">
         <h3>Register deployed escrow</h3>
-        <p>Deploy with the TestNet CLI first. Registration verifies the on-chain beneficiary and USDC ASA.</p>
         <form onSubmit={register}>
           <label>Application ID <em>Required</em></label>
           <input required type="number" min="1" value={appId} onChange={e => setAppId(e.target.value)} placeholder="e.g. 732910452" />
@@ -1516,9 +1511,6 @@ function EscrowPage() {
           </div>
         )}
       </section>
-      <div className="notice">
-        Write actions require an admin role and a configured server-side verifier mnemonic. RELEASED is only reflected after the Algorand transaction confirms.
-      </div>
     </>
   );
 }
@@ -1546,9 +1538,6 @@ function SettingsPage({ user }) {
             <small>{user?.isDemo ? 'Interactive Demo Mode' : 'Authenticated Firebase User'}</small>
           </div>
         </div>
-        <div className="notice">
-          Role assignment in live mode is controlled by trusted Firebase custom claims. In demo mode, full administrative and operator access is unlocked for evaluation.
-        </div>
       </section>
     </>
   );
@@ -1564,7 +1553,6 @@ function Admin() {
 
   return (
     <>
-      <Header eyebrow="ADMINISTRATION / FINANCE" title="Operations overview" desc="Restricted operational and financial metrics." />
       {err ? (
         <div className="notice">{err}</div>
       ) : (
