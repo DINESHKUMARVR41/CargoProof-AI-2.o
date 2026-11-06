@@ -7,7 +7,7 @@ import {
 import { api, auth, googleProvider } from './lib';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup,
-  sendEmailVerification, signOut, onAuthStateChanged
+  signInWithRedirect, sendEmailVerification, signOut, onAuthStateChanged
 } from 'firebase/auth';
 
 function Shell({ children, user, onLogout }) {
@@ -112,7 +112,21 @@ function Login({ onDemoLogin }) {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
-      setError(err.message);
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' ||
+          err.code === 'auth/cancelled-popup-request') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectErr) {
+          setError(redirectErr.message);
+        }
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('Google sign-in is blocked: add this site hostname to Firebase Authentication > Settings > Authorized domains.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Google sign-in is disabled. Enable the Google provider in Firebase Authentication > Sign-in method.');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setBusy(false);
     }
