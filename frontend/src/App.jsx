@@ -1017,17 +1017,29 @@ function Report() {
           <div className="panel-head">
             <div>
               <h3 style={{ color: '#1e40af' }}>Customer Payment Verification</h3>
-              <p>Customer verification fee settled on Base Sepolia</p>
+              <p>Customer verification fee settled on TestNet</p>
             </div>
-            <span className="tiny-label" style={{ background: '#dbeafe', color: '#1e40af', borderColor: '#bfdbfe' }}>BASE SEPOLIA</span>
+            <span className="tiny-label" style={{ background: '#dbeafe', color: '#1e40af', borderColor: '#bfdbfe' }}>
+              {data.customer_payment.network || 'BASE SEPOLIA'}
+            </span>
           </div>
           <div style={{ padding: '8px 0' }}>
             <div><small>Status: <strong style={{ color: '#2563eb' }}>{data.customer_payment.status || 'CONFIRMED'}</strong> · Amount: ${data.customer_payment.amount_usd || data.paid_usd} USDC</small></div>
-            {data.customer_payment.transaction_hash && (
-              <div><small>Tx Hash: <code style={{ color: '#1d4ed8' }}>{data.customer_payment.transaction_hash}</code></small></div>
+            {(data.customer_payment.tx_hash || data.customer_payment.transaction_hash) && (
+              <div><small>Tx Hash: <code style={{ color: '#1d4ed8' }}>{data.customer_payment.tx_hash || data.customer_payment.transaction_hash}</code></small></div>
             )}
             {data.customer_payment.payer_address && (
               <div><small>Payer: <code>{data.customer_payment.payer_address}</code></small></div>
+            )}
+            {data.customer_payment.explorer_url && (
+              <div style={{ marginTop: 8 }}>
+                <a href={data.customer_payment.explorer_url} target="_blank" rel="noreferrer" className="subtle-link" style={{ color: '#2563eb', fontWeight: 600 }}>
+                  View Customer Payment on Pera Explorer <ArrowUpRight size={13} />
+                </a>
+              </div>
+            )}
+            {data.customer_payment.confirmed_round && (
+              <div><small>Confirmed Round: {data.customer_payment.confirmed_round}</small></div>
             )}
           </div>
         </div>
